@@ -9,15 +9,15 @@ import (
 // NewBucket returns bucket with initial data and sets file access modes.
 // Implements io.ReaderAt, io.WriterAt, io.Seeker, io.Closer interfaces.
 // Shared cursor for writer and reader.
-func NewBucket(dat []byte, mode int) *bucket {
-	return &bucket{
+func NewBucket(dat []byte, mode int) *Bucket {
+	return &Bucket{
 		data:  dat,
 		modes: mode,
 	}
 }
 
 // bucket this is special container store data and implements io.ReaderAt, io.WriterAt, io.Seeker, io.Closer interfaces.
-type bucket struct {
+type Bucket struct {
 	// access modes of content (from linked file of outside)
 	modes int
 	// bucket contents
@@ -34,7 +34,7 @@ type bucket struct {
 // Nothing happens if
 // - is closed
 // - access modes has os.O_RDONLY
-func (b *bucket) Reset() {
+func (b *Bucket) Reset() {
 	if b.closed == true {
 		return
 	}
@@ -49,7 +49,7 @@ func (b *bucket) Reset() {
 // Truncate truncates container size data to specifed size. Growing if the size exceeds the current data size.
 // Continues to use the same allocated storage.
 // Returns errors if is closed or if there is no access for the operation.
-func (b *bucket) Truncate(size int64) error {
+func (b *Bucket) Truncate(size int64) error {
 	if b.closed == true {
 		return os.ErrClosed
 	}
@@ -74,11 +74,11 @@ func (b *bucket) Truncate(size int64) error {
 	return nil
 }
 
-var _ io.Reader = (*bucket)(nil)
+var _ io.Reader = (*Bucket)(nil)
 
 // Read implements the io.Reader interface.
 // Cursor is shiftes. Otherwise, the behavior is the same as ReadAt.
-func (b *bucket) Read(buf []byte) (n int, err error) {
+func (b *Bucket) Read(buf []byte) (n int, err error) {
 	n, err = b.ReadAt(buf, b.off)
 	if err != nil {
 		return 0, err
@@ -87,12 +87,12 @@ func (b *bucket) Read(buf []byte) (n int, err error) {
 	return n, nil
 }
 
-var _ io.ReaderAt = (*bucket)(nil)
+var _ io.ReaderAt = (*Bucket)(nil)
 
 // Read implements the io.ReaderAt interface.
 // Returns error if is closed or if there is no access for the operation or standard error for the reader.
 // Does not change the internal state.
-func (b *bucket) ReadAt(buf []byte, off int64) (n int, err error) {
+func (b *Bucket) ReadAt(buf []byte, off int64) (n int, err error) {
 	if b.closed == true {
 		return 0, os.ErrClosed
 	}
@@ -109,10 +109,10 @@ func (b *bucket) ReadAt(buf []byte, off int64) (n int, err error) {
 	return
 }
 
-var _ io.Seeker = (*bucket)(nil)
+var _ io.Seeker = (*Bucket)(nil)
 
 // Seek implements the io.Seeker interface.
-func (b *bucket) Seek(offset int64, whence int) (int64, error) {
+func (b *Bucket) Seek(offset int64, whence int) (int64, error) {
 	var abs int64
 	switch whence {
 	case io.SeekStart:
@@ -131,13 +131,13 @@ func (b *bucket) Seek(offset int64, whence int) (int64, error) {
 	return abs, nil
 }
 
-var _ io.Writer = (*bucket)(nil)
+var _ io.Writer = (*Bucket)(nil)
 
 // Write implements the io.Writer interface.
 // Write appends the contents of p to last read or wirte position of bucket. Growing the bucket as needed.
 // Cursor shiftes if allowed from access modes.
 // More details in method WriteAt.
-func (b *bucket) Write(p []byte) (n int, err error) {
+func (b *Bucket) Write(p []byte) (n int, err error) {
 	if b.closed == true {
 		return 0, os.ErrClosed
 	}
@@ -153,7 +153,7 @@ func (b *bucket) Write(p []byte) (n int, err error) {
 	return b.WriteAt(p, off)
 }
 
-var _ io.WriterAt = (*bucket)(nil)
+var _ io.WriterAt = (*Bucket)(nil)
 
 // WriteAt implements the io.WriterAt interface.
 // WriteAt append the contents of p to a specified position of bucket. Growing the bucket as needed.
@@ -161,7 +161,7 @@ var _ io.WriterAt = (*bucket)(nil)
 //
 // https://www.gnu.org/software/libc/manual/html_node/Operating-Modes.html
 // The bit that enables append mode for the file. If set, then all write operations write the data at the end of the file, extending it, regardless of the current file position. This is the only reliable way to append to a file. In append mode, you are guaranteed that the data you write will always go to the current end of the file, regardless of other processes writing to the file. Conversely, if you simply set the file position to the end of file and write, then another process can extend the file after you set the file position but before you write, resulting in your data appearing someplace before the real end of file.
-func (b *bucket) WriteAt(p []byte, pos int64) (n int, err error) {
+func (b *Bucket) WriteAt(p []byte, pos int64) (n int, err error) {
 	if b.closed == true {
 		return 0, os.ErrClosed
 	}
@@ -184,7 +184,7 @@ func (b *bucket) WriteAt(p []byte, pos int64) (n int, err error) {
 }
 
 // this code is coped fragment from aws WrtieAtBuffer.
-func (b *bucket) writeAt(p []byte, pos int64) (n int, err error) {
+func (b *Bucket) writeAt(p []byte, pos int64) (n int, err error) {
 	pLen := len(p)
 	expLen := pos + int64(pLen)
 	if int64(len(b.data)) < expLen {
@@ -199,10 +199,10 @@ func (b *bucket) writeAt(p []byte, pos int64) (n int, err error) {
 	return pLen, nil
 }
 
-var _ io.Closer = (*bucket)(nil)
+var _ io.Closer = (*Bucket)(nil)
 
 // Close implements the io.Closer interface.
-func (b *bucket) Close() error {
+func (b *Bucket) Close() error {
 
 	if b.closed {
 		return os.ErrClosed
@@ -212,27 +212,27 @@ func (b *bucket) Close() error {
 }
 
 // Size returns the original length of the data.
-func (b *bucket) Size() int64 {
+func (b *Bucket) Size() int64 {
 	return int64(len(b.data))
 }
 
 // Size returns the value of capacity of the slice stored of the data.
-func (b *bucket) Cap() int64 {
+func (b *Bucket) Cap() int64 {
 	return int64(cap(b.data))
 }
 
 // Changed returns true if data has been changed.
-func (b *bucket) Changed() bool {
+func (b *Bucket) Changed() bool {
 	return b.changed
 }
 
 // Closed returns true if has been called Close.
-func (b *bucket) Closed() bool {
+func (b *Bucket) Closed() bool {
 	return b.closed
 }
 
 // Mode returns allowed i/o operating modes.
-func (b *bucket) Mode() int {
+func (b *Bucket) Mode() int {
 	return b.modes
 }
 

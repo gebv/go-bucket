@@ -10,7 +10,7 @@ import (
 )
 
 func TestBucketHappyPaths(t *testing.T) {
-	regularChecks := func(t *testing.T, b *bucket, wantData []byte, wantOff int) {
+	regularChecks := func(t *testing.T, b *Bucket, wantData []byte, wantOff int) {
 		t.Helper()
 		equalBytes(t, wantData, b.data)
 		equalInts(t, int(wantOff), int(b.off))
