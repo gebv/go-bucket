@@ -15,7 +15,7 @@ func ExampleCloser() {
 	got, want := []byte{}, []byte("foo bar")
 	callback := func(changed bool, i withCloserInput) (err error) {
 		seq++
-		// required refresh cursor positio because we writen and create buffer without os.O_APPEND
+		// required refresh cursor positio because we written and create buffer without os.O_APPEND
 		i.Seek(0, io.SeekStart)
 		got, err = ioutil.ReadAll(i)
 		return err
