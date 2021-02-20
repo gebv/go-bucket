@@ -52,13 +52,14 @@ func TestCloser(t *testing.T) {
 		c := WithCloser(New([]byte{}, SetAppend(true)), CloseHook(closeFn))
 		assert.False(t, c.IsClosed())
 
+		assert.EqualValues(t, 0, seq)
 		err := c.Close()
 		assert.NoError(t, err)
 		assert.True(t, c.IsClosed())
+		assert.EqualValues(t, 1, seq)
 		err = c.Close()
 		assert.EqualError(t, os.ErrClosed, err.Error())
 		assert.True(t, c.IsClosed())
-
 		assert.EqualValues(t, 1, seq)
 	})
 	t.Run("close hook Err", func(t *testing.T) {
@@ -71,13 +72,14 @@ func TestCloser(t *testing.T) {
 		c := WithCloser(New([]byte{}, SetAppend(true)), CloseHook(closeFn))
 		assert.False(t, c.IsClosed())
 
+		assert.EqualValues(t, 0, seq)
 		err := c.Close()
 		assert.EqualError(t, someErr, err.Error())
+		assert.EqualValues(t, 1, seq)
 		assert.True(t, c.IsClosed())
 		err = c.Close()
 		assert.EqualError(t, os.ErrClosed, err.Error())
 		assert.True(t, c.IsClosed())
-
 		assert.EqualValues(t, 1, seq)
 	})
 }
