@@ -1,2 +1,2 @@
 test:
-	go test -v -timeout 1m -race -run=. -coverprofile=coverage.txt -covermode=atomic
+	go test -v -timeout 1m -race -coverprofile=coverage.txt -covermode=atomic -bench=. -run=. ./...

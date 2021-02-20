@@ -2,12 +2,43 @@ package bucket
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func ExampleCloser() {
+	var seq = 0
+	got, want := []byte{}, []byte("foo bar")
+	callback := func(changed bool, i withCloserInput) (err error) {
+		seq++
+		// required refresh cursor positio because we writen and create buffer without os.O_APPEND
+		i.Seek(0, io.SeekStart)
+		got, err = ioutil.ReadAll(i)
+		return err
+	}
+	// your buffer
+	b := New([]byte{})
+	// add for buffer io.Closer with callback
+	bc := WithCloser(b, CloseHook(callback))
+	// something is written
+	fmt.Fprint(bc, "foo")
+	fmt.Fprint(bc, " ")
+	fmt.Fprint(bc, "bar")
+	bc.Close()
+
+	fmt.Println("Seq:", seq)
+	fmt.Println("Want:", string(want))
+	fmt.Println("Got:", string(got))
+
+	// Output:
+	// Seq: 1
+	// Want: foo bar
+	// Got: foo bar
+}
 
 func TestCloser(t *testing.T) {
 	t.Run("not closed", func(t *testing.T) {

@@ -8,6 +8,40 @@ import (
 	"testing"
 )
 
+func ExampleBucket() {
+	// without os.O_APPEND logics
+	{
+		b := New([]byte("abc"), SetAppend(false))
+		fmt.Fprint(b, "def")
+		// reset cursor position
+		b.Seek(0, io.SeekStart)
+		got, _ := ioutil.ReadAll(b)
+		fmt.Printf("case1 got1: %q\n", string(got))
+		got, _ = ioutil.ReadAll(b)
+		fmt.Printf("case1 got2: %q\n", string(got))
+	}
+
+	fmt.Println()
+
+	// with os.O_APPEND logics
+	{
+		b := New([]byte("abc"), SetAppend(true))
+		fmt.Fprint(b, "def")
+		// no need to reset the cursor, because writing does not affect the position
+		got, _ := ioutil.ReadAll(b)
+		fmt.Printf("case2 got1: %q\n", string(got))
+		got, _ = ioutil.ReadAll(b)
+		fmt.Printf("case2 got2: %q\n", string(got))
+	}
+
+	// Output:
+	// case1 got1: "def"
+	// case1 got2: ""
+	//
+	// case2 got1: "abcdef"
+	// case2 got2: ""
+}
+
 func TestBucketHappyPaths(t *testing.T) {
 	regularChecks := func(t *testing.T, b *Bucket, wantData []byte, wantOff int) {
 		t.Helper()
