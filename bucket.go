@@ -196,7 +196,10 @@ func (b *Bucket) Cap() int64 {
 }
 
 var (
+	// ErrNegativePosition means invalid arguments for Seek method.
 	ErrNegativePosition = errors.New("negative position")
-	ErrNegativeSize     = errors.New("negative size")
-	ErrInvalidWhence    = errors.New("invalid whence")
+	// ErrNegativeSize means invalid arguments for Truncate method.
+	ErrNegativeSize = errors.New("negative size")
+	// ErrInvalidWhence means invalid arguments for Seek method.
+	ErrInvalidWhence = errors.New("invalid whence")
 )
