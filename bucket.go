@@ -6,56 +6,51 @@ import (
 	"os"
 )
 
-// NewBucket returns bucket with initial data and sets file access modes.
-// Implements io.ReaderAt, io.WriterAt, io.Seeker, io.Closer interfaces.
-// Shared cursor for writer and reader.
-func NewBucket(dat []byte, mode int) *Bucket {
+// New returns bucket with initial data and is append = false.
+func New(dat []byte) *Bucket {
 	return &Bucket{
-		data:  dat,
-		modes: mode,
+		data: dat,
 	}
 }
 
-// bucket this is special container store data and implements io.ReaderAt, io.WriterAt, io.Seeker, io.Closer interfaces.
+// NewWithAppend returns bucket with initial data and is append = true.
+func NewWithAppend(dat []byte) *Bucket {
+	return &Bucket{
+		data:     dat,
+		isAppend: true,
+	}
+}
+
+// NewBucket returns bucket with initial data and sets file access modes (use only os.O_APPEND).
+func NewBucket(dat []byte, flag int) *Bucket {
+	return &Bucket{
+		data:     dat,
+		isAppend: flag&os.O_APPEND != 0,
+	}
+}
+
+// Bucket this is special container store data and implements io.ReaderAt, io.WriterAt, io.Seeker interfaces.
+// Shared cursor for writer and reader.
+// Implements io.ReaderAt, io.WriterAt, io.Seeker interfaces.
 type Bucket struct {
-	// access modes of content (from linked file of outside)
-	modes int
+	// if true the writer to append guaranteed into end of the file
+	isAppend bool
 	// bucket contents
 	data []byte
-	// true if was called Close function
-	closed bool
-	// true if was modified data
-	changed bool
 	// position of cursor for reader and writer
 	off int64
 }
 
 // Reset resets the bucket to be empty, but capacity is not changes.
-// Nothing happens if
-// - is closed
-// - access modes has os.O_RDONLY
 func (b *Bucket) Reset() {
-	if b.closed == true {
-		return
-	}
-	if isReadOnly(b.modes) {
-		return
-	}
 	b.data = b.data[:0]
 	b.off = 0
-	b.changed = true
 }
 
 // Truncate truncates container size data to specifed size. Growing if the size exceeds the current data size.
 // Continues to use the same allocated storage.
 // Returns errors if is closed or if there is no access for the operation.
 func (b *Bucket) Truncate(size int64) error {
-	if b.closed == true {
-		return os.ErrClosed
-	}
-	if isReadOnly(b.modes) {
-		return ErrNoAccess
-	}
 	if size == 0 {
 		b.Reset()
 		return nil
@@ -70,7 +65,6 @@ func (b *Bucket) Truncate(size int64) error {
 		}
 	}
 	b.data = b.data[:size]
-	b.changed = true
 	return nil
 }
 
@@ -89,16 +83,10 @@ func (b *Bucket) Read(buf []byte) (n int, err error) {
 
 var _ io.ReaderAt = (*Bucket)(nil)
 
-// Read implements the io.ReaderAt interface.
-// Returns error if is closed or if there is no access for the operation or standard error for the reader.
+// ReadAt implements the io.ReaderAt interface.
+// Returns error for standard error for the reader.
 // Does not change the internal state.
 func (b *Bucket) ReadAt(buf []byte, off int64) (n int, err error) {
-	if b.closed == true {
-		return 0, os.ErrClosed
-	}
-	if isWriteOnly(b.modes) {
-		return 0, ErrNoAccess
-	}
 	if len(buf) > 0 && off == int64(len(b.data)) {
 		return 0, io.EOF
 	}
@@ -138,15 +126,8 @@ var _ io.Writer = (*Bucket)(nil)
 // Cursor shiftes if allowed from access modes.
 // More details in method WriteAt.
 func (b *Bucket) Write(p []byte) (n int, err error) {
-	if b.closed == true {
-		return 0, os.ErrClosed
-	}
-	if isReadOnly(b.modes) {
-		return 0, ErrNoAccess
-	}
-
 	off := b.off
-	if isAppend(b.modes) {
+	if b.isAppend {
 		// append guaranteed into end of the file
 		off = int64(len(b.data))
 	}
@@ -162,28 +143,22 @@ var _ io.WriterAt = (*Bucket)(nil)
 // https://www.gnu.org/software/libc/manual/html_node/Operating-Modes.html
 // The bit that enables append mode for the file. If set, then all write operations write the data at the end of the file, extending it, regardless of the current file position. This is the only reliable way to append to a file. In append mode, you are guaranteed that the data you write will always go to the current end of the file, regardless of other processes writing to the file. Conversely, if you simply set the file position to the end of file and write, then another process can extend the file after you set the file position but before you write, resulting in your data appearing someplace before the real end of file.
 func (b *Bucket) WriteAt(p []byte, pos int64) (n int, err error) {
-	if b.closed == true {
-		return 0, os.ErrClosed
-	}
-	if isReadOnly(b.modes) {
-		return 0, ErrNoAccess
-	}
-
-	if !isAppend(b.modes) {
+	if !b.isAppend {
 		b.off = pos
 	}
 	n, err = b.writeAt(p, pos)
 	if err != nil {
 		return 0, err
 	}
-	b.changed = true
-	if !isAppend(b.modes) {
+
+	if !b.isAppend {
 		b.off += int64(n)
 	}
 	return
 }
 
 // this code is coped fragment from aws WrtieAtBuffer.
+// auto growing if needed.
 func (b *Bucket) writeAt(p []byte, pos int64) (n int, err error) {
 	pLen := len(p)
 	expLen := pos + int64(pLen)
@@ -199,47 +174,18 @@ func (b *Bucket) writeAt(p []byte, pos int64) (n int, err error) {
 	return pLen, nil
 }
 
-var _ io.Closer = (*Bucket)(nil)
-
-// Close implements the io.Closer interface.
-func (b *Bucket) Close() error {
-
-	if b.closed {
-		return os.ErrClosed
-	}
-	b.closed = true
-	return nil
-}
-
 // Size returns the original length of the data.
 func (b *Bucket) Size() int64 {
 	return int64(len(b.data))
 }
 
-// Size returns the value of capacity of the slice stored of the data.
+// Cap returns the value of capacity of the slice stored of the data.
 func (b *Bucket) Cap() int64 {
 	return int64(cap(b.data))
-}
-
-// Changed returns true if data has been changed.
-func (b *Bucket) Changed() bool {
-	return b.changed
-}
-
-// Closed returns true if has been called Close.
-func (b *Bucket) Closed() bool {
-	return b.closed
-}
-
-// Mode returns allowed i/o operating modes.
-func (b *Bucket) Mode() int {
-	return b.modes
 }
 
 var (
 	ErrNegativePosition = errors.New("negative position")
 	ErrNegativeSize     = errors.New("negative size")
 	ErrInvalidWhence    = errors.New("invalid whence")
-	// ErrNoAccess means that an operation rejected by a i/o operating modes.
-	ErrNoAccess = errors.New("no access")
 )

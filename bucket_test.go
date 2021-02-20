@@ -43,13 +43,6 @@ func TestBucketHappyPaths(t *testing.T) {
 		noError(t, err)
 		regularChecks(t, b, []byte("abcdefghi"), 0)
 	})
-	t.Run("writeTo_presetReadOnly", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDONLY)
-		fmt.Fprint(b, "def")
-		_, err := b.Write([]byte("def"))
-		equalError(t, ErrNoAccess, err)
-		regularChecks(t, b, []byte("abc"), 0)
-	})
 
 	t.Run("writeAndRead_presetRWAppend", func(t *testing.T) {
 		b := NewBucket([]byte("abc"), os.O_RDWR|os.O_APPEND)
@@ -136,27 +129,6 @@ func TestBucketHappyPaths(t *testing.T) {
 		regularChecks(t, b, []byte(""), 0)
 	})
 
-	t.Run("closed", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR)
-		fmt.Fprint(b, "def")
-		regularChecks(t, b, []byte("def"), 3)
-
-		err := b.Close()
-		noError(t, err)
-
-		err = b.Close()
-		equalError(t, os.ErrClosed, err)
-
-		_, err = b.Read(make([]byte, 3))
-		equalError(t, os.ErrClosed, err)
-
-		_, err = b.Write(make([]byte, 3))
-		equalError(t, os.ErrClosed, err)
-
-		err = b.Truncate(3)
-		equalError(t, os.ErrClosed, err)
-	})
-
 	t.Run("read_EOF", func(t *testing.T) {
 		b := NewBucket([]byte("abc"), os.O_RDWR|os.O_APPEND)
 		fmt.Fprint(b, "def")
@@ -187,19 +159,6 @@ func TestBucketHappyPaths(t *testing.T) {
 		equalError(t, io.ErrUnexpectedEOF, err)
 	})
 
-	t.Run("readOnly", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDONLY)
-		fmt.Fprint(b, "def")
-		regularChecks(t, b, []byte("abc"), 0)
-
-		err := b.Truncate(3)
-		equalError(t, ErrNoAccess, err)
-		err = b.Truncate(12)
-		equalError(t, ErrNoAccess, err)
-		err = b.Truncate(0)
-		equalError(t, ErrNoAccess, err)
-	})
-
 	t.Run("writeOnlyAndTruncate", func(t *testing.T) {
 		b := NewBucket([]byte("abc"), os.O_WRONLY)
 		fmt.Fprint(b, "def")
@@ -218,12 +177,6 @@ func TestBucketHappyPaths(t *testing.T) {
 		err = b.Truncate(0)
 		noError(t, err)
 		regularChecks(t, b, []byte(""), 0)
-
-		_, err = b.Read(make([]byte, 3))
-		equalError(t, ErrNoAccess, err)
-
-		_, err = b.ReadAt(make([]byte, 3), 3)
-		equalError(t, ErrNoAccess, err)
 	})
 
 	t.Run("ErrOutOfRange", func(t *testing.T) {
