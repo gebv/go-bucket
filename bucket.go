@@ -58,7 +58,7 @@ func (b *Bucket) Reset() {
 	b.off = 0
 }
 
-// Truncate truncates container size data to specifed size. Growing if the size exceeds the current data size.
+// Truncate truncates container size data to specified size. Growing if the size exceeds the current data size.
 // Continues to use the same allocated storage.
 // Returns errors if is closed or if there is no access for the operation.
 func (b *Bucket) Truncate(size int64) error {
