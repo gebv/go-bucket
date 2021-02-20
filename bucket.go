@@ -14,11 +14,13 @@ type RatWatSeeker interface {
 	io.Seeker
 }
 
+// Sizer it is interface with methods Size and Cap.
 type Sizer interface {
 	Size() int64
 	Cap() int64
 }
 
+// Truncater it is interface with methods Truncate and Reset (the same as Truncate(0)).
 type Truncater interface {
 	Truncate(size int64) error
 	Reset()
