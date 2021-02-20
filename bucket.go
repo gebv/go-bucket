@@ -5,24 +5,47 @@ import (
 	"io"
 )
 
+// RatWatSeeker the name is formed from interfaces io.Reader, io.ReaderAt, io.Writer, io.WriterAt, io.Seeker.
+type RatWatSeeker interface {
+	io.Reader
+	io.ReaderAt
+	io.Writer
+	io.WriterAt
+	io.Seeker
+}
+
+type Sizer interface {
+	Size() int64
+	Cap() int64
+}
+
+type Truncater interface {
+	Truncate(size int64) error
+	Reset()
+}
+
+var _ RatWatSeeker = (*Bucket)(nil)
+var _ Sizer = (*Bucket)(nil)
+var _ Truncater = (*Bucket)(nil)
+
 // New returns bucket with initial data and is append = false.
-func New(dat []byte, sets ...opt) *Bucket {
-	opt := opts{}
+func New(dat []byte, sets ...optBucket) *Bucket {
+	opt := bucketOpts{}
 	for _, set := range sets {
 		set(&opt)
 	}
 
 	return &Bucket{
-		data: dat,
-		opts: opt,
+		data:       dat,
+		bucketOpts: opt,
 	}
 }
 
-// Bucket this is special container store data and implements io.ReaderAt, io.WriterAt, io.Seeker interfaces.
+// Bucket this is special container store data and implements io.Reader, io.ReaderAt, io.Writer, io.WriterAt, io.Seeker interfaces.
 // Shared cursor for writer and reader.
-// Implements io.ReaderAt, io.WriterAt, io.Seeker interfaces.
+// Implements io.Reader, io.ReaderAt, io.Writer, io.WriterAt, io.Seeker interfaces.
 type Bucket struct {
-	opts
+	bucketOpts
 	// bucket contents
 	data []byte
 	// position of cursor for reader and writer
