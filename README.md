@@ -15,6 +15,9 @@ The bit that enables append mode for the file. If set, then all write operations
 </pre>
 See more details of flags https://www.gnu.org/software/libc/manual/html_node/Operating-Modes.html
 
+
+See example for [bucket](bucket_test.go#L11-43) and [closer](closer_test.go#L13-41).
+
 TODO features
 - (maybe) lazy load - init bucket with lazy loading data
 - (experements) implement with io.Pipe for specific cases
