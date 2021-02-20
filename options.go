@@ -26,7 +26,7 @@ func SetOpModes(flag int) optBucket {
 type optCloser func(o *closerOpts)
 
 // CloseHook sets callback function for close method.
-func CloseHook(fn func(changed bool, i withCloserInput) error) optCloser {
+func CloseHook(fn func(changed bool, i BucketIface) error) optCloser {
 	return func(o *closerOpts) {
 		o.closeFn = fn
 	}
@@ -35,5 +35,5 @@ func CloseHook(fn func(changed bool, i withCloserInput) error) optCloser {
 type closerOpts struct {
 	// callback function of close function
 	// will be called once the first time the io.Closer interface is closed. Passing interface  will not be closed yet.
-	closeFn func(changed bool, i withCloserInput) error
+	closeFn func(changed bool, i BucketIface) error
 }

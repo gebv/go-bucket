@@ -5,33 +5,30 @@ import (
 	"os"
 )
 
-type withCloserInput interface {
-	RatWatSeeker
-	Truncater
+type BucketCloserIface interface {
+	BucketIface
+
+	io.Closer
 }
 
-type withCloserOutput interface {
-	RatWatSeeker
-	Truncater
-	io.Closer
-
+type CloserHelper interface {
 	// IsClosed returns true is interface is closed.
 	// It is helper function (maybe is not need and in future will be removed).
 	IsClosed() bool
 }
 
 // WithCloser returns input interface with io.Closer and with check of closing.
-func WithCloser(in withCloserInput, sets ...optCloser) withCloserOutput {
+func WithCloser(in BucketIface, sets ...optCloser) BucketCloserIface {
 	opt := closerOpts{}
 	for _, set := range sets {
 		set(&opt)
 	}
 
-	return &wrapCloser{withCloserInput: in, closerOpts: opt}
+	return &wrapCloser{BucketIface: in, closerOpts: opt}
 }
 
 type wrapCloser struct {
-	withCloserInput
+	BucketIface
 	// indicates if the interface has been closed
 	closed bool
 	// indicates if the data has changed
@@ -45,7 +42,7 @@ func (w *wrapCloser) ReadAt(p []byte, off int64) (n int, err error) {
 	if w.closed {
 		return 0, os.ErrClosed
 	}
-	return w.withCloserInput.ReadAt(p, off)
+	return w.BucketIface.ReadAt(p, off)
 }
 
 // Reset implements io.Reader interfaces with closing check.
@@ -53,7 +50,7 @@ func (w *wrapCloser) Read(p []byte) (n int, err error) {
 	if w.closed {
 		return 0, os.ErrClosed
 	}
-	return w.withCloserInput.Read(p)
+	return w.BucketIface.Read(p)
 }
 
 // Reset implements io.Writer interfaces with closing check.
@@ -62,7 +59,7 @@ func (w *wrapCloser) Write(p []byte) (n int, err error) {
 		return 0, os.ErrClosed
 	}
 	w.changed = true
-	return w.withCloserInput.Write(p)
+	return w.BucketIface.Write(p)
 }
 
 // Reset implements io.WriterAt interfaces with closing check.
@@ -71,7 +68,7 @@ func (w *wrapCloser) WriteAt(p []byte, off int64) (n int, err error) {
 		return 0, os.ErrClosed
 	}
 	w.changed = true
-	return w.withCloserInput.WriteAt(p, off)
+	return w.BucketIface.WriteAt(p, off)
 }
 
 // Reset implements Truncater interfaces with closing check.
@@ -80,7 +77,7 @@ func (w *wrapCloser) Truncate(size int64) error {
 		return os.ErrClosed
 	}
 	w.changed = true
-	return w.withCloserInput.Truncate(size)
+	return w.BucketIface.Truncate(size)
 }
 
 // Reset implements Truncater interfaces with closing check.
@@ -89,7 +86,7 @@ func (w *wrapCloser) Reset() {
 		return
 	}
 	w.changed = true
-	w.withCloserInput.Reset()
+	w.BucketIface.Reset()
 }
 
 // Reset implements io.Closer interfaces with closing check.
@@ -104,6 +101,7 @@ func (w *wrapCloser) Close() error {
 	return nil
 }
 
+// IsClosed implements CloserHelper interface.
 func (w *wrapCloser) IsClosed() bool {
 	return w.closed
 }

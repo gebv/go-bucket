@@ -5,30 +5,22 @@ import (
 	"io"
 )
 
-// RatWatSeeker the name is formed from interfaces io.Reader, io.ReaderAt, io.Writer, io.WriterAt, io.Seeker.
-type RatWatSeeker interface {
+// BucketIface the interface that implements the Bucket.
+type BucketIface interface {
 	io.Reader
 	io.ReaderAt
 	io.Writer
 	io.WriterAt
 	io.Seeker
-}
 
-// Sizer it is interface with methods Size and Cap.
-type Sizer interface {
 	Size() int64
 	Cap() int64
-}
 
-// Truncater it is interface with methods Truncate and Reset (the same as Truncate(0)).
-type Truncater interface {
 	Truncate(size int64) error
 	Reset()
 }
 
-var _ RatWatSeeker = (*Bucket)(nil)
-var _ Sizer = (*Bucket)(nil)
-var _ Truncater = (*Bucket)(nil)
+var _ BucketIface = (*Bucket)(nil)
 
 // New returns bucket with initial data and is append = false.
 func New(dat []byte, sets ...optBucket) *Bucket {
