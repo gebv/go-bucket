@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func ExampleCloser() {
+func ExampleWithCloser() {
 	var seq = 0
 	got, want := []byte{}, []byte("foo bar")
 	callback := func(changed bool, i withCloserInput) (err error) {
