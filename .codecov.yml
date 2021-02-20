@@ -5,4 +5,4 @@ coverage:
   range: "60...80"
 
 ignore:
-  - "os.go"
+  - "options.go"

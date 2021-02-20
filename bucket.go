@@ -3,29 +3,18 @@ package bucket
 import (
 	"errors"
 	"io"
-	"os"
 )
 
 // New returns bucket with initial data and is append = false.
-func New(dat []byte) *Bucket {
+func New(dat []byte, sets ...opt) *Bucket {
+	opt := opts{}
+	for _, set := range sets {
+		set(&opt)
+	}
+
 	return &Bucket{
 		data: dat,
-	}
-}
-
-// NewWithAppend returns bucket with initial data and is append = true.
-func NewWithAppend(dat []byte) *Bucket {
-	return &Bucket{
-		data:     dat,
-		isAppend: true,
-	}
-}
-
-// NewBucket returns bucket with initial data and sets file access modes (use only os.O_APPEND).
-func NewBucket(dat []byte, flag int) *Bucket {
-	return &Bucket{
-		data:     dat,
-		isAppend: flag&os.O_APPEND != 0,
+		opts: opt,
 	}
 }
 
@@ -33,8 +22,7 @@ func NewBucket(dat []byte, flag int) *Bucket {
 // Shared cursor for writer and reader.
 // Implements io.ReaderAt, io.WriterAt, io.Seeker interfaces.
 type Bucket struct {
-	// if true the writer to append guaranteed into end of the file
-	isAppend bool
+	opts
 	// bucket contents
 	data []byte
 	// position of cursor for reader and writer

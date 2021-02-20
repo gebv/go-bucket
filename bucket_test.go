@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"testing"
 )
 
@@ -16,28 +15,21 @@ func TestBucketHappyPaths(t *testing.T) {
 		equalInts(t, int(wantOff), int(b.off))
 	}
 	t.Run("writeTo_presetWRAppend", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR|os.O_APPEND)
+		b := New([]byte("abc"), SetAppend(true))
 		fmt.Fprint(b, "def")
 		_, err := b.Write([]byte("ghi"))
 		noError(t, err)
 		regularChecks(t, b, []byte("abcdefghi"), 0)
 	})
 	t.Run("writeTo_presetWR", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR)
-		fmt.Fprint(b, "def")
-		_, err := b.Write([]byte("ghi"))
-		noError(t, err)
-		regularChecks(t, b, []byte("defghi"), 6)
-	})
-	t.Run("writeTo_presetWriteOnly", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_WRONLY)
+		b := New([]byte("abc"))
 		fmt.Fprint(b, "def")
 		_, err := b.Write([]byte("ghi"))
 		noError(t, err)
 		regularChecks(t, b, []byte("defghi"), 6)
 	})
 	t.Run("writeTo_presetWriteOnlyAppend", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_WRONLY|os.O_APPEND)
+		b := New([]byte("abc"), SetAppend(true))
 		fmt.Fprint(b, "def")
 		_, err := b.Write([]byte("ghi"))
 		noError(t, err)
@@ -45,7 +37,7 @@ func TestBucketHappyPaths(t *testing.T) {
 	})
 
 	t.Run("writeAndRead_presetRWAppend", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR|os.O_APPEND)
+		b := New([]byte("abc"), SetAppend(true))
 		fmt.Fprint(b, "def")
 		regularChecks(t, b, []byte("abcdef"), 0)
 
@@ -61,7 +53,7 @@ func TestBucketHappyPaths(t *testing.T) {
 	})
 
 	t.Run("seeker_presetRWAppend", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR|os.O_APPEND)
+		b := New([]byte("abc"), SetAppend(true))
 		fmt.Fprint(b, "def")
 		regularChecks(t, b, []byte("abcdef"), 0)
 
@@ -104,7 +96,7 @@ func TestBucketHappyPaths(t *testing.T) {
 	})
 
 	t.Run("trunReset_presetRWAppend", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR|os.O_APPEND)
+		b := New([]byte("abc"), SetAppend(true))
 		fmt.Fprint(b, "def")
 		regularChecks(t, b, []byte("abcdef"), 0)
 
@@ -117,7 +109,7 @@ func TestBucketHappyPaths(t *testing.T) {
 	})
 
 	t.Run("trunReset_presetRW", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR)
+		b := New([]byte("abc"))
 		fmt.Fprint(b, "def")
 		regularChecks(t, b, []byte("def"), 3)
 
@@ -130,7 +122,7 @@ func TestBucketHappyPaths(t *testing.T) {
 	})
 
 	t.Run("read_EOF", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR|os.O_APPEND)
+		b := New([]byte("abc"), SetAppend(true))
 		fmt.Fprint(b, "def")
 		regularChecks(t, b, []byte("abcdef"), 0)
 
@@ -159,8 +151,8 @@ func TestBucketHappyPaths(t *testing.T) {
 		equalError(t, io.ErrUnexpectedEOF, err)
 	})
 
-	t.Run("writeOnlyAndTruncate", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_WRONLY)
+	t.Run("writeAndTruncate", func(t *testing.T) {
+		b := New([]byte("abc"))
 		fmt.Fprint(b, "def")
 		regularChecks(t, b, []byte("def"), 3)
 
@@ -180,7 +172,7 @@ func TestBucketHappyPaths(t *testing.T) {
 	})
 
 	t.Run("ErrOutOfRange", func(t *testing.T) {
-		b := NewBucket([]byte("abc"), os.O_RDWR|os.O_APPEND)
+		b := New([]byte("abc"), SetAppend(true))
 		fmt.Fprint(b, "def")
 		regularChecks(t, b, []byte("abcdef"), 0)
 
