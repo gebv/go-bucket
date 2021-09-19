@@ -75,13 +75,13 @@ func (b *Bucket) Truncate(size int64) error {
 
 var _ io.Reader = (*Bucket)(nil)
 
-// Read implements the io.Reader interface.
-// Cursor is shiftes. Otherwise, the behavior is the same as ReadAt.
+// Read implements the io.Reader interface. Cursor is shiftes.
 func (b *Bucket) Read(buf []byte) (n int, err error) {
-	n, err = b.ReadAt(buf, b.off)
-	if err != nil {
-		return 0, err
+	if b.off >= int64(len(b.data)) {
+		return 0, io.EOF
 	}
+
+	n = copy(buf, b.data[b.off:])
 	b.off += int64(n)
 	return n, nil
 }
@@ -99,6 +99,9 @@ func (b *Bucket) ReadAt(buf []byte, off int64) (n int, err error) {
 		return 0, io.ErrUnexpectedEOF
 	}
 	n = copy(buf, b.data[off:])
+	if n < len(buf) {
+		err = io.EOF
+	}
 	return
 }
 

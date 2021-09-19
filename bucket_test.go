@@ -6,7 +6,24 @@ import (
 	"io"
 	"io/ioutil"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func TestABC(t *testing.T) {
+	// borig := bytes.NewReader([]byte("def"))
+	// got, _ := ioutil.ReadAll(borig)
+	// fmt.Printf("case1 got0: %q\n", string(got))
+
+	b := New([]byte("abc"), SetAppend(false))
+	fmt.Fprint(b, "def")
+	// reset cursor position
+	b.Seek(0, io.SeekStart)
+	got, _ := ioutil.ReadAll(b)
+	fmt.Printf("case1 got1: %q\n", string(got))
+	got, _ = ioutil.ReadAll(b)
+	fmt.Printf("case1 got2: %q\n", string(got))
+}
 
 func ExampleBucket() {
 	// without os.O_APPEND logics
@@ -212,6 +229,33 @@ func TestBucketHappyPaths(t *testing.T) {
 
 		err := b.Truncate(-1)
 		equalError(t, ErrNegativeSize, err)
+	})
+
+	t.Run("ReadAtEOF", func(t *testing.T) {
+		b := New([]byte("TEST"))
+		buf := make([]byte, 5)
+		n, err := b.ReadAt(buf, 0)
+		equalError(t, io.EOF, err)
+		assert.EqualValues(t, 4, n)
+		equalBytes(t, []byte("TEST\x00"), buf)
+	})
+
+	t.Run("ReadAll1", func(t *testing.T) {
+		b := New([]byte("abc"), SetAppend(false))
+		fmt.Fprint(b, "def")
+		// reset cursor position
+		b.Seek(0, io.SeekStart)
+		got, _ := ioutil.ReadAll(b)
+		equalBytes(t, []byte("def"), got)
+	})
+
+	t.Run("ReadAll2", func(t *testing.T) {
+		b := New([]byte("abc"), SetAppend(true))
+		fmt.Fprint(b, "def")
+		// reset cursor position
+		b.Seek(0, io.SeekStart)
+		got, _ := ioutil.ReadAll(b)
+		equalBytes(t, []byte("abcdef"), got)
 	})
 
 	// TODO: more tests for seeker
