@@ -113,4 +113,11 @@ func TestCloser(t *testing.T) {
 		assert.True(t, c.(CloserHelper).IsClosed())
 		assert.EqualValues(t, 1, seq)
 	})
+	t.Run("SeekClosed", func(t *testing.T) {
+		c := WithCloser(New([]byte("foo"), SetAppend(true)))
+		err := c.Close()
+		assert.NoError(t, err)
+		_, err = c.Seek(0, 0)
+		assert.Error(t, err)
+	})
 }

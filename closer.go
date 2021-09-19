@@ -37,6 +37,14 @@ type wrapCloser struct {
 	closerOpts
 }
 
+// Seek implements io.Seeker interfaces with closing check.
+func (w *wrapCloser) Seek(offset int64, whence int) (int64, error) {
+	if w.closed {
+		return 0, os.ErrClosed
+	}
+	return w.BucketIface.Seek(offset, whence)
+}
+
 // Reset implements io.ReaderAt interfaces with closing check.
 func (w *wrapCloser) ReadAt(p []byte, off int64) (n int, err error) {
 	if w.closed {
